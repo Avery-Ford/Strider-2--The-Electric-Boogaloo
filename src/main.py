@@ -39,7 +39,7 @@ BLENDER_LEG_TO_SERVO: dict[str, str] = {
 }
 
 # Thread pool for handling servo operations
-servo_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="servo_worker")
+servo_executor = ThreadPoolExecutor(max_workers=6, thread_name_prefix="servo_worker")
 # Message queue for buffering incoming servo commands
 servo_queue = Queue(maxsize=1000)
 # Flag to control the servo processing thread
