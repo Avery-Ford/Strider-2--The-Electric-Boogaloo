@@ -1,44 +1,44 @@
+import threading
+import time
+import logging
 
-#TODO: Change code to make a camera class for the camera
+from picamera2 import Picamera2
 
-
-import board
-import adafruit_vl53l1x
-
-class DistanceSensor:
-    __slots__ = ("mode, timing_budget, sensor, last_val, model_info") 
-    mode: int
-    timing_budget: int
-    sensor: str
-    last_val: int | None
-    model_info = dict
-
-    def __init__(self, mode, timing_budget):
-        i2c = board.I2C()
-        self.sensor = adafruit_vl53l1x.VL53L1X(i2c)
-        self.sensor.distance_mode = mode 
-        self.sensor.timing_budget = timing_budget
-        self.last_val = None
-
-        self.model_info = {}
-        self.mode = mode
-        self.timing_budget = timing_budget
-
-
-    def read_dist(self):
-        self.sensor.start_ranging()
-        if self.sensor.data_ready:
-            dist = self.sensor.distance
-            self.sensor.clear_interrupt()
-            if dist is not None:
-                self.last_val = dist
-        return self.last_val
-
-    def end(self):
-        self.sensor.stop_ranging()
+class Camera:
+    width: int
+    height: int
+    camera: Picamera2
     
-    def get_info(self):
-        self.model_info["Distance Mode"] = self.mode
-        self.model_info["Timing Budget"] = self.timing_budget
-        self.model_info["Sensor Info"] = self.sensor
-        return self.model_info
+
+    def __init__(self, width = 640, height = 480):
+        self.width = width
+        self.height = height
+        self.camera = Picamera2()
+        self.camera.configure(self.camera.create_video_configuration({"size": (self.width, self.height), "format": "YUV420"}))
+        self.frame = None
+        self.frame_time = None
+        self.lock = threading.Lock()
+        self.stop_event = threading.Event()
+        self.thread = None
+    
+    def start(self):
+        self.camera.start()
+        self.stop_event.clear()
+        self.thread = threading.Thread(target=self.capture_loop, daemon=True)
+        self.thread.start() 
+
+    def capture_loop(self):
+        while not self._stop_event.is_set():
+            try:
+                frame = self.camera.capture_array()
+                with self.lock:
+                    self.frame = frame
+                    self.frame_time = time.time()
+            except Exception as e:
+                logging.error(f"Error capturing frame: {e}")
+                print(f"Error capturing frame: {e}")
+            time.sleep(0.01)  # Adjust the sleep time as needed for your application
+    
+    def get_latest_frame(self):
+        with self.lock:
+            return self.frame, self.frame_time

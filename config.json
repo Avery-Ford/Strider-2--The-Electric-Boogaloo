@@ -1,4 +1,10 @@
 {
+	"Camera": {
+		"camera1": {
+			"width": "640",
+			"height": "480"
+		}
+	},
 	"ServoHat": {
 		"hat1": {
 			"address": "0x41"
